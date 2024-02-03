@@ -64,7 +64,7 @@ event Refund:
 
 event ClaimKey:
   user: indexed(address)
-  pubkey: Bytes[PUBKEY_BYTES]
+  pubkey: indexed(Bytes[PUBKEY_BYTES])
 
 @external
 def setAdmin(_newAdmin: address):
@@ -101,27 +101,27 @@ def confirmKey(_pubkey: Bytes[PUBKEY_BYTES], _user: address):
 
 event SubmitKey:
   user: indexed(address)
-  pubkey: Bytes[PUBKEY_BYTES]
+  pubkey: indexed(Bytes[PUBKEY_BYTES])
   privkey: Bytes[MAX_ENCRYPTED_KEY_BYTES]
 
 event SetEnabled:
-  pubkey: Bytes[PUBKEY_BYTES]
+  pubkey: indexed(Bytes[PUBKEY_BYTES])
   enabled: indexed(bool)
 
 event SetGraffiti:
-  pubkey: Bytes[PUBKEY_BYTES]
+  pubkey: indexed(Bytes[PUBKEY_BYTES])
   graffiti: String[MAX_GRAFFITI_LENGTH]
 
 event SetFeeRecipient:
-  pubkey: Bytes[PUBKEY_BYTES]
+  pubkey: indexed(Bytes[PUBKEY_BYTES])
   feeRecipient: indexed(address)
 
 event SetFeeToken:
-  pubkey: Bytes[PUBKEY_BYTES]
+  pubkey: indexed(Bytes[PUBKEY_BYTES])
   feeToken: indexed(ERC20)
 
 event Exit:
-  pubkey: Bytes[PUBKEY_BYTES]
+  pubkey: indexed(Bytes[PUBKEY_BYTES])
 
 event ClaimRefund:
   user: indexed(address)
