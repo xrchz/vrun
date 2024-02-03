@@ -1,7 +1,6 @@
 #pragma version ^0.3.0
 
 MAX_GRAFFITI_LENGTH: constant(uint256) = 32
-NUM_ACCEPTED_TOKENS: constant(uint256) = 8
 MAX_ENCRYPTED_KEY_BYTES: constant(uint256) = 64
 PUBKEY_BYTES: constant(uint256) = 48
 
@@ -15,12 +14,13 @@ interface WETH:
 # configuration state:
 
 admin: public(address)
-# the first token is assumed to be WETH
-acceptedTokens: immutable(address[NUM_ACCEPTED_TOKENS])
+weth: public(immutable(WETH))
+acceptedTokens: public(HashMap[ERC20, bool])
 
 @external
-def __init__(tokens: address[NUM_ACCEPTED_TOKENS]):
-  acceptedTokens = tokens
+def __init__(_weth: address):
+  weth = WETH(_weth)
+  self.acceptedTokens[ERC20(_weth)] = True
   self.admin = msg.sender
 
 # state:
@@ -35,18 +35,19 @@ struct Validator:
 
 validators: public(HashMap[Bytes[PUBKEY_BYTES], Validator])
 
-struct User:
-  paid: uint256[NUM_ACCEPTED_TOKENS]
-  charged: uint256[NUM_ACCEPTED_TOKENS]
-  pendingRefund: uint256[NUM_ACCEPTED_TOKENS]
-
-users: public(HashMap[address, User])
+paid: public(HashMap[address, HashMap[ERC20, uint256]])
+charged: public(HashMap[address, HashMap[ERC20, uint256]])
+pendingRefund: public(HashMap[address, HashMap[ERC20, uint256]])
 
 # admin actions:
 
 event SetAdmin:
   old: indexed(address)
   new: indexed(address)
+
+event SetToken:
+  token: indexed(ERC20)
+  accepted: indexed(bool)
 
 event Withdraw:
   token: indexed(ERC20)
@@ -73,23 +74,28 @@ def setAdmin(_newAdmin: address):
   log SetAdmin(msg.sender, _newAdmin)
 
 @external
-def withdraw(_tokenIndex: uint256, _amount: uint256):
+def setToken(_token: ERC20, _accepted: bool):
   assert msg.sender == self.admin, "auth"
-  token: ERC20 = ERC20(acceptedTokens[_tokenIndex])
-  assert token.transfer(msg.sender, _amount), "tfr"
-  log Withdraw(token, _amount)
+  self.acceptedTokens[_token] = _accepted
+  log SetToken(_token, _accepted)
 
 @external
-def charge(_user: address, _tokenIndex: uint256, _amount: uint256):
+def withdraw(_token: ERC20, _amount: uint256):
   assert msg.sender == self.admin, "auth"
-  self.users[_user].charged[_tokenIndex] += _amount
-  log Charge(_user, ERC20(acceptedTokens[_tokenIndex]), _amount)
+  assert _token.transfer(msg.sender, _amount), "tfr"
+  log Withdraw(_token, _amount)
 
 @external
-def refund(_user: address, _tokenIndex: uint256, _amount: uint256):
+def charge(_user: address, _token: ERC20, _amount: uint256):
   assert msg.sender == self.admin, "auth"
-  self.users[_user].pendingRefund[_tokenIndex] += _amount
-  log Refund(_user, ERC20(acceptedTokens[_tokenIndex]), _amount)
+  self.charged[_user][_token] += _amount
+  log Charge(_user, _token, _amount)
+
+@external
+def refund(_user: address, _token: ERC20, _amount: uint256):
+  assert msg.sender == self.admin, "auth"
+  self.pendingRefund[_user][_token] += _amount
+  log Refund(_user, _token, _amount)
 
 @external
 def confirmKey(_pubkey: Bytes[PUBKEY_BYTES], _user: address):
@@ -158,11 +164,11 @@ def setFeeRecipient(_pubkey: Bytes[PUBKEY_BYTES], _feeRecipient: address):
   log SetFeeRecipient(_pubkey, _feeRecipient)
 
 @external
-def setFeeToken(_pubkey: Bytes[PUBKEY_BYTES], _tokenIndex: uint256):
+def setFeeToken(_pubkey: Bytes[PUBKEY_BYTES], _token: ERC20):
   assert self.validators[_pubkey].claimedBy == msg.sender, "auth"
-  token: ERC20 = ERC20(acceptedTokens[_tokenIndex])
-  self.validators[_pubkey].feeToken = token
-  log SetFeeToken(_pubkey, token)
+  assert self.acceptedTokens[_token], "token"
+  self.validators[_pubkey].feeToken = _token
+  log SetFeeToken(_pubkey, _token)
 
 @external
 def exit(_pubkey: Bytes[PUBKEY_BYTES]):
@@ -171,22 +177,21 @@ def exit(_pubkey: Bytes[PUBKEY_BYTES]):
   log Exit(_pubkey)
 
 @external
-def claimRefund(_tokenIndex: uint256, _amount: uint256):
-  token: ERC20 = ERC20(acceptedTokens[_tokenIndex])
-  self.users[msg.sender].pendingRefund[_tokenIndex] -= _amount
-  assert token.transfer(msg.sender, _amount), "tfr"
-  log ClaimRefund(msg.sender, token, _amount)
+def claimRefund(_token: ERC20, _amount: uint256):
+  self.pendingRefund[msg.sender][_token] -= _amount
+  assert _token.transfer(msg.sender, _amount), "tfr"
+  log ClaimRefund(msg.sender, _token, _amount)
 
 @external
-def payToken(_tokenIndex: uint256, _amount: uint256):
-  token: ERC20 = ERC20(acceptedTokens[_tokenIndex])
-  assert token.transferFrom(msg.sender, self, _amount), "tfr"
-  self.users[msg.sender].paid[_tokenIndex] += _amount
-  log Pay(msg.sender, token, _amount)
+def payToken(_token: ERC20, _amount: uint256):
+  assert self.acceptedTokens[_token], "token"
+  assert _token.transferFrom(msg.sender, self, _amount), "tfr"
+  self.paid[msg.sender][_token] += _amount
+  log Pay(msg.sender, _token, _amount)
 
 @external
 @payable
 def payEther():
-  WETH(acceptedTokens[0]).deposit(value = msg.value)
-  self.users[msg.sender].paid[0] += msg.value
-  log Pay(msg.sender, ERC20(acceptedTokens[0]), msg.value)
+  weth.deposit(value = msg.value)
+  self.paid[msg.sender][ERC20(weth.address)] += msg.value
+  log Pay(msg.sender, ERC20(weth.address), msg.value)
