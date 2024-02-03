@@ -34,7 +34,6 @@ struct Validator:
   feeToken: ERC20
 
 validators: public(HashMap[Bytes[PUBKEY_BYTES], Validator])
-claims: public(HashMap[Bytes[PUBKEY_BYTES], address])
 
 struct User:
   paid: uint256[NUM_ACCEPTED_TOKENS]
@@ -95,7 +94,6 @@ def refund(_user: address, _tokenIndex: uint256, _amount: uint256):
 @external
 def confirmKey(_pubkey: Bytes[PUBKEY_BYTES], _user: address):
   assert msg.sender == self.admin, "auth"
-  assert self.claims[_pubkey] == _user, "user"
   self.validators[_pubkey].claimedBy = _user
   log ClaimKey(_user, _pubkey)
 
@@ -137,7 +135,6 @@ event Pay:
 
 @external
 def submitKey(_pubkey: Bytes[PUBKEY_BYTES], _privkey: Bytes[MAX_ENCRYPTED_KEY_BYTES]):
-  self.claims[_pubkey] = msg.sender
   log SubmitKey(msg.sender, _pubkey, _privkey)
 
 @external
