@@ -134,7 +134,9 @@ event Pay:
   amount: indexed(uint256)
 
 @external
-def submitKey(_pubkey: Bytes[PUBKEY_BYTES], _privkey: Bytes[MAX_ENCRYPTED_KEY_BYTES]):
+def submitKey(_pubkey: Bytes[PUBKEY_BYTES], _privkey: Bytes[MAX_ENCRYPTED_KEY_BYTES],
+              _v: uint256, _r: bytes32, _s: bytes32):
+  assert ecrecover(keccak256(_privkey), _v, _r, _s) == msg.sender, "sig"
   log SubmitKey(msg.sender, _pubkey, _privkey)
 
 @external
