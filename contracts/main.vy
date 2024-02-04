@@ -1,7 +1,7 @@
 #pragma version ^0.3.0
 
 MAX_GRAFFITI_LENGTH: constant(uint256) = 32
-MAX_ENCRYPTED_KEY_BYTES: constant(uint256) = 64
+MAX_ENCRYPTED_KEY_BYTES: constant(uint256) = 256
 PUBKEY_BYTES: constant(uint256) = 48
 
 interface ERC20:
