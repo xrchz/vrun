@@ -67,10 +67,34 @@ if (!commands.includes(process.env.COMMAND)) {
 }
 
 if (process.env.COMMAND == 'test') {
-  const testSeed = '0xc55257c360c07c72029aebc1b53c05ed0362ada38ead3e3e9efa3708e53495531f09a6987599d18264c1e1c92f2cf141630c7a3c4ab7c81b2f001698e7463b04'
-  const seed = ethers.getBytes(testSeed)
-  const master_sk = secretKeyFromSeed(seed)
-  console.log(`Got master_SK ${master_sk} from test seed`)
+  const testCases = [
+    {
+      seed: '0x3141592653589793238462643383279502884197169399375105820974944592',
+      master_SK: 29757020647961307431480504535336562678282505419141012933316116377660817309383n
+    },
+    {
+      seed: '0xc55257c360c07c72029aebc1b53c05ed0362ada38ead3e3e9efa3708e53495531f09a6987599d18264c1e1c92f2cf141630c7a3c4ab7c81b2f001698e7463b04',
+      master_SK: 6083874454709270928345386274498605044986640685124978867557563392430687146096n
+    },
+    {
+      seed: '0x0099FF991111002299DD7744EE3355BBDD8844115566CC55663355668888CC00',
+      master_SK: 27580842291869792442942448775674722299803720648445448686099262467207037398656n
+    },
+    {
+      seed: '0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3',
+      master_SK: 19022158461524446591288038168518313374041767046816487870552872741050760015818n
+    }
+  ]
+  for (const [i, {seed, master_SK}] of testCases.entries()) {
+    const seedBytes = ethers.getBytes(seed)
+    const sk = secretKeyFromSeed(seedBytes)
+    if (sk == master_SK)
+      console.log(`Test case ${i} passed`)
+    else {
+      console.error(`Test case ${i} failed: Got ${sk} instead of ${master_SK}`)
+      process.exit(1)
+    }
+  }
   process.exit()
 }
 
