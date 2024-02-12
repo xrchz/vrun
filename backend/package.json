@@ -1,0 +1,10 @@
+{
+  "name": "vrün",
+  "version": "0.0.1",
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "dependencies": {
+    "dotenv": "16",
+    "ethers": "6"
+  }
+}
